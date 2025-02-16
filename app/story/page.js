@@ -17,8 +17,8 @@ export default function StoryPage() {
     if (savedStory) {
       setStory(savedStory);
       setInitialImage(savedImage);
-      localStorage.removeItem('generatedStory');
-      localStorage.removeItem('initialImage');
+      // localStorage.removeItem('generatedStory');
+      // localStorage.removeItem('initialImage');
     } else {
       router.push('/create');
     }
@@ -159,13 +159,15 @@ export default function StoryPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <button 
-        onClick={() => router.push('/create')}
-        className="mb-8 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-      >
-        Create New Story
-      </button>
       <BookComponent storyString={story} />
+      <div className="flex justify-center">
+        <button 
+          onClick={() => router.push('/create')}
+          className="mb-8 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+        >
+          Create New Story
+        </button>
+      </div>
     </div>
   );
 } 
