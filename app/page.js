@@ -108,40 +108,69 @@ export default function Home() {
   // Page component to display the parsed content
   const PageComponent = ({ pageData }) => {
     const [pageImage, setPageImage] = useState(null);
-    const [imageLoading, setImageLoading] = useState(true);
+    const [imageLoading, setImageLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+      setMounted(true);
+    }, []);
+
+    useEffect(() => {
+      if (!pageData?.pictureDescription || !mounted) {
+        return;
+      }
+
       const fetchPageImage = async () => {
         setImageLoading(true);
-        const url = await generateImage(pageData.pictureDescription);
-        setPageImage(url);
-        setImageLoading(false);
+        try {
+          const url = await generateImage(pageData.pictureDescription);
+          if (url) {
+            setPageImage(url);
+          }
+        } catch (error) {
+          console.error("Error fetching image:", error);
+        } finally {
+          setImageLoading(false);
+        }
       };
 
       fetchPageImage();
-    }, [pageData.pictureDescription]);
+    }, [pageData?.pictureDescription, mounted]);
 
     return (
       <div className="page mb-12 border-b pb-8">
         <h2 className="text-2xl font-bold mb-4">Page {pageData.pageNumber}</h2>
         <div className="flex gap-8">
-          {/* Left side - Image */}
           <div className="w-1/2 flex-shrink-0">
-            {imageLoading ? (
-              <div className="w-full aspect-square bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
-                Loading image...
-              </div>
-            ) : (
-              pageImage && (
-                <Image
-                  src={pageImage}
-                  alt={`Illustration for page ${pageData.pageNumber}`}
-                  width={500}
-                  height={500}
-                  className="rounded-lg w-full h-auto"
-                />
-              )
-            )}
+            <div className="relative aspect-square">
+              {mounted && (
+                <>
+                  {imageLoading && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
+                      Loading image...
+                    </div>
+                  )}
+                  {!imageLoading && !pageImage && (
+                    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center rounded-lg">
+                      No image available
+                    </div>
+                  )}
+                  {pageImage && (
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={pageImage}
+                        alt={`Illustration for page ${pageData.pageNumber}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="rounded-lg object-cover"
+                        priority
+                        unoptimized
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Right side - Content */}
