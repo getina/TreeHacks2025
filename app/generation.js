@@ -11,6 +11,12 @@ const client = new LumaAI({
 });
 
 export async function generateImage(prompt) {
+  // Add validation check
+  if (!prompt) {
+    console.warn("No prompt provided for image generation");
+    return null;
+  }
+
   try {
     let generation = await client.generations.image.create({
       prompt: prompt,
