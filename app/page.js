@@ -12,26 +12,48 @@ import Image from "next/image";
 export default function Home() {
   const [imageUrl, setImageUrl] = useState(null);
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const [storyLoading, setStoryLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(true);
   const [story, setStory] = useState("");
+=======
+  const [storyLoading, setStoryLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [story, setStory] = useState('');
+  const [storyParams, setStoryParams] = useState({
+    targetLanguage: 'Chinese',
+    vocabLevel: 'Intermediate',
+    numPages: '5',
+    ageGroup: '4-6',
+    theme: 'Sci-fi',
+    vocabPerPage: '2'
+  });
+>>>>>>> Stashed changes
 
-  const exampleArgs = {
-    targetLanguage: "Chinese",
-    vocabLevel: "Intermediate",
-    numPages: "10",
-    ageGroup: "18-24",
-    theme: "Sci-fi",
-    vocabPerPage: "2",
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStoryLoading(true);
+    setImageLoading(true);
+    
+    // Generate new story and image
+    const url = await generateImage();
+    setImageUrl(url);
+    setImageLoading(false);
+    
+    const story = await generateBilingualStory(storyParams);
+    setStory(story);
+    setStoryLoading(false);
   };
 
-  useEffect(() => {
-    const fetchImage = async () => {
-      const url = await generateImage();
-      setImageUrl(url);
-      setImageLoading(false); // Set loading to false once the image is fetched
-    };
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setStoryParams(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
+<<<<<<< Updated upstream
     fetchImage();
     const fetchStory = async () => {
       const story = await generateBilingualStory(exampleArgs);
@@ -78,6 +100,9 @@ export default function Home() {
   };
 
   // Replace the useEffect with a form component
+=======
+  // StoryForm component definition
+>>>>>>> Stashed changes
   const StoryForm = () => (
     <form onSubmit={handleSubmit} className="w-full max-w-lg mb-8 space-y-4">
       <div className="flex flex-col space-y-2">
@@ -167,6 +192,9 @@ export default function Home() {
       </button>
     </form>
   );
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
   const parseStory = (storyString) => {
@@ -317,7 +345,8 @@ export default function Home() {
   return (
 <<<<<<< Updated upstream
     <div className="max-w-4xl mx-auto p-8">
-      {!storyLoading && <BookComponent storyString={story} />}
+      <StoryForm />
+      {!storyLoading && story && <BookComponent storyString={story} />}
       {storyLoading && <p>Loading story...</p>}
 =======
     <div className="flex flex-col items-center w-full min-h-screen p-8">
