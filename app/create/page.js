@@ -48,8 +48,9 @@ export default function CreateStory() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <form onSubmit={handleSubmit} className="w-full max-w-lg mb-8 space-y-4">
+    <div className="min-h-screen flex items-center justify-center">
+       <div className="max-w-4xl p-8">
+        <form onSubmit={handleSubmit} className="w-full max-w-lg mb-8 space-y-4">
         <div className="flex flex-col space-y-2">
           <p className="font-medium text-lg mb-4">I want to create a {storyParams.theme} story</p>
           <label className="font-medium">Theme:
@@ -136,6 +137,7 @@ export default function CreateStory() {
           {storyLoading || imageLoading ? 'Generating...' : 'Generate Story'}
         </button>
       </form>
+    </div>
     </div>
   );
 } 

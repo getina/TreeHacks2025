@@ -131,10 +131,7 @@ export default function StoryPage() {
                 </ul>
               </div>
 
-              <div className="picture-description">
-                <h3 className="font-bold">Picture Description:</h3>
-                <p className="mb-4">{pageData.pictureDescription}</p>
-              </div>
+              
             </div>
           </div>
         </div>
