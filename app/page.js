@@ -106,8 +106,7 @@ export default function Home() {
   };
 
   // Page component to display the parsed content
-  const PageComponent = ({ pageData }) => {
-    const [pageImage, setPageImage] = useState(null);
+  const PageComponent = ({ pageData, cachedImage, onImageGenerated }) => {
     const [imageLoading, setImageLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -116,16 +115,21 @@ export default function Home() {
     }, []);
 
     useEffect(() => {
-      if (!pageData?.pictureDescription || !mounted) {
-        return;
-      }
-
       const fetchPageImage = async () => {
+        // If we already have a cached image, don't generate a new one
+        if (cachedImage) {
+          return;
+        }
+
+        if (!pageData?.pictureDescription || !mounted) {
+          return;
+        }
+
         setImageLoading(true);
         try {
           const url = await generateImage(pageData.pictureDescription);
           if (url) {
-            setPageImage(url);
+            onImageGenerated(pageData.pageNumber, url);
           }
         } catch (error) {
           console.error("Error fetching image:", error);
@@ -135,7 +139,7 @@ export default function Home() {
       };
 
       fetchPageImage();
-    }, [pageData?.pictureDescription, mounted]);
+    }, [pageData.pictureDescription, pageData.pageNumber, mounted, cachedImage, onImageGenerated]);
 
     return (
       <div className="page mb-12 border-b pb-8">
@@ -145,20 +149,20 @@ export default function Home() {
             <div className="relative aspect-square">
               {mounted && (
                 <>
-                  {imageLoading && (
+                  {imageLoading && !cachedImage && (
                     <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
                       Loading image...
                     </div>
                   )}
-                  {!imageLoading && !pageImage && (
+                  {!imageLoading && !cachedImage && (
                     <div className="absolute inset-0 bg-gray-100 flex items-center justify-center rounded-lg">
                       No image available
                     </div>
                   )}
-                  {pageImage && (
+                  {cachedImage && (
                     <div className="relative w-full h-full">
                       <Image
-                        src={pageImage}
+                        src={cachedImage}
                         alt={`Illustration for page ${pageData.pageNumber}`}
                         fill
                         sizes="(max-width: 768px) 100vw, 50vw"
@@ -203,14 +207,66 @@ export default function Home() {
 
   // Component that handles rendering all pages
   const BookComponent = ({ storyString }) => {
-    const pages = parseStory(storyString); // Parse the story string
+    const [currentPageIndex, setCurrentPageIndex] = useState(0);
+    const [pageImages, setPageImages] = useState({});
+    const pages = parseStory(storyString);
 
-    console.log("pages from Book", pages);
+    const handleNextPage = () => {
+      if (currentPageIndex < pages.length - 1) {
+        setCurrentPageIndex(currentPageIndex + 1);
+      }
+    };
+
+    const handlePreviousPage = () => {
+      if (currentPageIndex > 0) {
+        setCurrentPageIndex(currentPageIndex - 1);
+      }
+    };
+
+    const handleImageGenerated = (pageNumber, imageUrl) => {
+      setPageImages(prev => ({
+        ...prev,
+        [pageNumber]: imageUrl
+      }));
+    };
+
     return (
       <div className="book">
-        {pages.map((pageData) => (
-          <PageComponent key={pageData.pageNumber} pageData={pageData} />
-        ))}
+        <PageComponent 
+          pageData={pages[currentPageIndex]} 
+          cachedImage={pageImages[pages[currentPageIndex].pageNumber]}
+          onImageGenerated={handleImageGenerated}
+        />
+
+        <div className="flex justify-between mt-8">
+          <button
+            onClick={handlePreviousPage}
+            disabled={currentPageIndex === 0}
+            className={`px-4 py-2 rounded-lg ${
+              currentPageIndex === 0
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+          >
+            Previous Page
+          </button>
+
+          <span className="self-center">
+            Page {currentPageIndex + 1} of {pages.length}
+          </span>
+
+          <button
+            onClick={handleNextPage}
+            disabled={currentPageIndex === pages.length - 1}
+            className={`px-4 py-2 rounded-lg ${
+              currentPageIndex === pages.length - 1
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+          >
+            Next Page
+          </button>
+        </div>
       </div>
     );
   };
