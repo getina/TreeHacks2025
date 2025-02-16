@@ -10,9 +10,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 export default function Home() {
-  const [imageUrl, setImageUrl] = useState(null);
   const [storyLoading, setStoryLoading] = useState(true);
-  const [imageLoading, setImageLoading] = useState(true);
   const [story, setStory] = useState("");
 
   const exampleArgs = {
@@ -25,18 +23,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const fetchImage = async () => {
-      const url = await generateImage();
-      setImageUrl(url);
-      setImageLoading(false); // Set loading to false once the image is fetched
-    };
-
-    fetchImage();
     const fetchStory = async () => {
       const story = await generateBilingualStory(exampleArgs);
       console.log("story", story);
       setStory(story);
-      setStoryLoading(false); // Set loading to false once the image is fetched
+      setStoryLoading(false);
     };
     fetchStory();
   }, []);
@@ -105,74 +96,54 @@ export default function Home() {
     return pages;
   };
 
+  const generateImagesInBatch = async (pages, onProgress) => {
+    const images = {};
+    let completed = 0;
+
+    for (const page of pages) {
+      try {
+        const imageUrl = await generateImage(page.pictureDescription);
+        if (imageUrl) {
+          images[page.pageNumber] = imageUrl;
+          completed++;
+          onProgress(completed, pages.length);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(
+          `Error generating image for page ${page.pageNumber}:`,
+          error
+        );
+      }
+    }
+
+    return images;
+  };
+
   // Page component to display the parsed content
-  const PageComponent = ({ pageData, cachedImage, onImageGenerated }) => {
-    const [imageLoading, setImageLoading] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-      setMounted(true);
-    }, []);
-
-    useEffect(() => {
-      const fetchPageImage = async () => {
-        // If we already have a cached image, don't generate a new one
-        if (cachedImage) {
-          return;
-        }
-
-        if (!pageData?.pictureDescription || !mounted) {
-          return;
-        }
-
-        setImageLoading(true);
-        try {
-          const url = await generateImage(pageData.pictureDescription);
-          if (url) {
-            onImageGenerated(pageData.pageNumber, url);
-          }
-        } catch (error) {
-          console.error("Error fetching image:", error);
-        } finally {
-          setImageLoading(false);
-        }
-      };
-
-      fetchPageImage();
-    }, [pageData.pictureDescription, pageData.pageNumber, mounted, cachedImage, onImageGenerated]);
-
+  const PageComponent = ({ pageData, cachedImage }) => {
     return (
       <div className="page mb-12 border-b pb-8">
         <h2 className="text-2xl font-bold mb-4">Page {pageData.pageNumber}</h2>
         <div className="flex gap-8">
           <div className="w-1/2 flex-shrink-0">
             <div className="relative aspect-square">
-              {mounted && (
-                <>
-                  {imageLoading && !cachedImage && (
-                    <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center rounded-lg">
-                      Loading image...
-                    </div>
-                  )}
-                  {!imageLoading && !cachedImage && (
-                    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center rounded-lg">
-                      No image available
-                    </div>
-                  )}
-                  {cachedImage && (
-                    <div className="relative w-full h-full">
-                      <Image
-                        src={cachedImage}
-                        alt={`Illustration for page ${pageData.pageNumber}`}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="rounded-lg object-cover"
-                        priority
-                        unoptimized
-                      />
-                    </div>
-                  )}
-                </>
+              {!cachedImage ? (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center rounded-lg">
+                  No image available
+                </div>
+              ) : (
+                <div className="relative w-full h-full">
+                  <Image
+                    src={cachedImage}
+                    alt={`Illustration for page ${pageData.pageNumber}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="rounded-lg object-cover"
+                    priority
+                    unoptimized
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -209,7 +180,52 @@ export default function Home() {
   const BookComponent = ({ storyString }) => {
     const [currentPageIndex, setCurrentPageIndex] = useState(0);
     const [pageImages, setPageImages] = useState({});
+    const [isGeneratingImages, setIsGeneratingImages] = useState(true);
     const pages = parseStory(storyString);
+
+    useEffect(() => {
+      let mounted = true;
+
+      const loadImages = async () => {
+        setIsGeneratingImages(true);
+        try {
+          // Generate images one by one, updating state as each completes
+          for (const page of pages) {
+            if (!mounted) break;
+
+            // Only generate if we don't already have this image
+            if (!pageImages[page.pageNumber]) {
+              try {
+                const imageUrl = await generateImage(page.pictureDescription);
+                if (imageUrl && mounted) {
+                  setPageImages((prev) => ({
+                    ...prev,
+                    [page.pageNumber]: imageUrl,
+                  }));
+                }
+                // Remove the artificial delay - the API already has rate limiting
+                // await new Promise(resolve => setTimeout(resolve, 1000));
+              } catch (error) {
+                console.error(
+                  `Error generating image for page ${page.pageNumber}:`,
+                  error
+                );
+              }
+            }
+          }
+        } finally {
+          if (mounted) {
+            setIsGeneratingImages(false);
+          }
+        }
+      };
+
+      loadImages();
+
+      return () => {
+        mounted = false;
+      };
+    }, [pages, pageImages]);
 
     const handleNextPage = () => {
       if (currentPageIndex < pages.length - 1) {
@@ -223,19 +239,11 @@ export default function Home() {
       }
     };
 
-    const handleImageGenerated = (pageNumber, imageUrl) => {
-      setPageImages(prev => ({
-        ...prev,
-        [pageNumber]: imageUrl
-      }));
-    };
-
     return (
       <div className="book">
-        <PageComponent 
-          pageData={pages[currentPageIndex]} 
+        <PageComponent
+          pageData={pages[currentPageIndex]}
           cachedImage={pageImages[pages[currentPageIndex].pageNumber]}
-          onImageGenerated={handleImageGenerated}
         />
 
         <div className="flex justify-between mt-8">
@@ -253,6 +261,7 @@ export default function Home() {
 
           <span className="self-center">
             Page {currentPageIndex + 1} of {pages.length}
+            {isGeneratingImages && " (Generating images...)"}
           </span>
 
           <button
