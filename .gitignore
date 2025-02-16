@@ -36,3 +36,5 @@ Thumbs.db
 
 # Mac system files
 *.swp
+
+.env
